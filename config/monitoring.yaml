@@ -1,0 +1,54 @@
+# Monitoring configuration. Edit this file to change what is watched.
+# Subreddits are seeded into the database at startup; afterwards they can also be
+# managed via the API (POST/PATCH/DELETE /api/reddit/subreddits).
+
+product:
+  name: "Acme Widgets"
+  description: >
+    A SaaS tool that helps small teams track customer feedback and turn it into
+    a prioritised roadmap.
+  # Extra guidance for the LLM about tone / what to avoid.
+  guidelines: >
+    Be genuinely helpful first. Only mention the product when it clearly answers
+    what the person asked, and never include a link unless they asked for one.
+
+subreddits:
+  - SaaS
+  - startups
+  - Entrepreneur
+  - smallbusiness
+  - webdev
+
+# Soft signals for the cheap pre-filter. A post matching any keyword OR looking
+# like a question / recommendation request is sent to the LLM; everything else is skipped.
+keywords:
+  - customer feedback
+  - roadmap
+  - feature request
+  - product management
+  - user research
+
+ignored_authors:
+  - AutoModerator
+
+filter:
+  min_text_length: 25
+  # When true, posts without keyword match or help-seeking signal are skipped.
+  require_signal: true
+
+fetch:
+  initial_lookback_hours: 24   # first run for a subreddit only looks this far back
+  max_posts_per_run: 100
+  max_comments_per_thread: 40
+  max_comment_chars: 800
+  max_llm_calls_per_run: 30
+
+thresholds:
+  min_relevance: 0.5      # below this, REPLY_* / PREPARE_PRIVATE_MESSAGE become NO_ACTION
+  min_confidence: 0.5
+  monitor_min_relevance: 0.3
+
+reevaluation:
+  min_new_comments: 2
+  cooldown_hours: 6
+  max_age_days: 7          # MONITORING opportunities older than this become IGNORED
