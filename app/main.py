@@ -10,7 +10,7 @@ from app.db import init_db, make_engine, make_session_factory
 from app.filtering import KeywordCandidateFilter
 from app.llm.factory import build_llm_client
 from app.monitor import RedditMonitoringService
-from app.reddit.http_client import HttpRedditClient
+from app.reddit.http_client import HttpRedditClient, PublicRedditClient
 from app.scheduler import IntervalScheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -21,6 +21,8 @@ def build_reddit_client(settings: Settings, subreddits: list[str]):
         from app.dev.fakes import demo_reddit_client
 
         return demo_reddit_client(subreddits)
+    if settings.reddit_client == "public":
+        return PublicRedditClient(settings)
     return HttpRedditClient(settings)
 
 

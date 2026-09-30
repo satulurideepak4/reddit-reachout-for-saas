@@ -19,6 +19,7 @@ from app.util import log_event
 log = logging.getLogger(__name__)
 
 OAUTH_BASE = "https://oauth.reddit.com"
+PUBLIC_BASE = "https://www.reddit.com"
 TOKEN_URL = "https://www.reddit.com/api/v1/access_token"
 REMOVED_MARKERS = {"[deleted]", "[removed]"}
 
@@ -61,6 +62,12 @@ class HttpRedditClient:
         self._token_expiry = time.time() + int(body.get("expires_in", 3600))
         return self._token
 
+    _base = OAUTH_BASE
+    _suffix = ""
+
+    def _headers(self) -> dict[str, str]:
+        return {"Authorization": f"bearer {self._get_token()}", "User-Agent": self.s.reddit_user_agent}
+
     # ---- low-level request with retries -----------------------------------
     def _request(self, method: str, path: str, *, idempotent: bool = True, **kwargs: Any) -> dict | list:
         """idempotent=False (writes): retry only on 429, where Reddit did not process the request."""
@@ -70,8 +77,7 @@ class HttpRedditClient:
             retry_reason: str | None = None
             wait = min(self.backoff_base * 2 ** (attempt - 1), self.max_wait)
             try:
-                headers = {"Authorization": f"bearer {self._get_token()}", "User-Agent": self.s.reddit_user_agent}
-                resp = self.http.request(method, f"{OAUTH_BASE}{path}", headers=headers, **kwargs)
+                resp = self.http.request(method, f"{self._base}{path}{self._suffix}", headers=self._headers(), **kwargs)
             except httpx.TransportError as exc:
                 if not idempotent:
                     raise RedditError(f"network error during write (outcome unknown): {type(exc).__name__}") from exc
@@ -200,3 +206,19 @@ def _flatten(children: list, post: RedditPost, out: list[RedditComment], limit: 
         replies = d.get("replies")
         if isinstance(replies, dict):
             _flatten(replies["data"]["children"], post, out, limit)
+
+
+class PublicRedditClient(HttpRedditClient):
+    """Read-only client for Reddit's unauthenticated public JSON (no credentials; REDDIT_CLIENT=public).
+
+    Stricter rate limits than OAuth and Reddit may block some IPs (403/429). Cannot post.
+    """
+
+    _base = PUBLIC_BASE
+    _suffix = ".json"
+
+    def _headers(self) -> dict[str, str]:
+        return {"User-Agent": self.s.reddit_user_agent}
+
+    def _comment(self, parent: str, text: str) -> PostedReply:
+        raise RedditError("public (unauthenticated) Reddit client is read-only; use REDDIT_CLIENT=real to post")

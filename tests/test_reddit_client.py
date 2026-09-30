@@ -97,3 +97,22 @@ def test_conversation_parsing_flattens_and_flags_deleted():
     c, _ = make_client(token_or(lambda r: httpx.Response(200, json=payload)))
     convo = c.get_conversation("a", 50)
     assert [(x.id, x.removed) for x in convo.comments] == [("c1", False), ("c2", False), ("c3", True)]
+
+
+def test_public_client_unauthenticated_read_only():
+    from app.reddit.http_client import PublicRedditClient
+
+    seen = []
+
+    def h(req):
+        seen.append(req)
+        return httpx.Response(200, json=listing(["a", "b"]))
+
+    s = Settings(_env_file=None)
+    c = PublicRedditClient(s, http=httpx.Client(transport=httpx.MockTransport(h)), sleep=lambda _: None)
+    posts = c.get_new_posts("SaaS", None, 2)
+    assert [p.id for p in posts] == ["a", "b"]
+    assert str(seen[0].url).startswith("https://www.reddit.com/r/SaaS/new.json")
+    assert "authorization" not in seen[0].headers
+    with pytest.raises(RedditError):
+        c.reply_to_post("t3_a", "x")

@@ -58,6 +58,9 @@ uvicorn --factory app.main:app_factory --port 8000     # scheduler starts with t
 pytest                                                 # all external calls mocked
 ```
 
+Read real posts with **no Reddit credentials** (read-only, unauthenticated public JSON; Reddit may rate-limit or block some IPs):
+`REDDIT_CLIENT=public LLM_PROVIDER=fake python -m app.cli run-once --subreddit SaaS`
+
 Try it with **no credentials** (canned offline Reddit data + fake LLM):
 `REDDIT_CLIENT=fake LLM_PROVIDER=fake uvicorn --factory app.main:app_factory`.
 

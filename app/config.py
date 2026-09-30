@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    reddit_client: str = "real"  # real | fake
+    reddit_client: str = "real"  # real | public (no credentials, read-only) | fake
     reddit_client_id: str = ""
     reddit_client_secret: str = ""
     reddit_username: str = ""
